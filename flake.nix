@@ -2,6 +2,7 @@
   description = "A basic project in flutter";
 
   inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05"; # sau stabilește un canal dorit, ex. nixos-24.05
     flake-utils = {
       url = "github:numtide/flake-utils";
     };
