@@ -1,18 +1,9 @@
 {
-  description = "A basic project in flutter";
+  description = "Reproducible Flutter dev environment + Android emulator";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05"; # sau stabilește un canal dorit, ex. nixos-24.05
-    flake-utils = {
-      url = "github:numtide/flake-utils";
-    };
-    flake-compat = {
-      url = "github:edolstra/flake-compat";
-      flake = false;
-    };
-    android-nixpkgs = {
-      url = "github:tadfisher/android-nixpkgs";
-    };
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
   outputs =
@@ -20,8 +11,6 @@
       self,
       nixpkgs,
       flake-utils,
-      flake-compat,
-      android-nixpkgs,
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
@@ -29,96 +18,68 @@
         pkgs = import nixpkgs {
           inherit system;
           config = {
-            allowUnfree = true;
-            android_sdk = {
-              accept_license = true;
-            };
+            allowUnfree = true; # Android Studio, fonts …
+            android_sdk.accept_license = true; # Google + Android licences
           };
         };
 
-        androidEnvCustomPackage = pkgs.androidenv.composeAndroidPackages {
-          # cmdLineToolsVersion = 11.0;
-          toolsVersion = "26.1.1";
-          platformToolsVersion = "34.0.5";
-          buildToolsVersions = [
-            "30.0.3"
-            "34.0.0"
-          ];
+        # One self-contained SDK that already contains the emulator +
+        # all the system-images we need.
+        androidComposition = pkgs.androidenv.composeAndroidPackages {
+          # -- SDK command-line tools + emulator core -------------------
+          cmdLineToolsVersion = "11.0";
           includeEmulator = true;
           emulatorVersion = "34.1.9";
-          platformVersions = [
-            "28"
-            "29"
-            "30"
-            "31"
-            "32"
-            "33"
-            "34"
-          ];
-          includeSources = false;
-          includeSystemImages = true;
+
+          # -- you only need the *latest* platform + build-tools ----------
+          platformVersions = [ "34" ];
+          buildToolsVersions = [ "34.0.0" ];
+
+          # -- one ABI that matches your host ---------------------------
+          abiVersions = [ "x86_64" ];
           systemImageTypes = [ "google_apis_playstore" ];
-          abiVersions = [
-            "armeabi-v7a"
-            "arm64-v8a"
-          ];
-          cmakeVersions = [ "3.10.2" ];
-          includeNDK = true;
-          ndkVersions = [ "22.0.7026061" ];
-          useGoogleAPIs = false;
-          useGoogleTVAddOns = false;
+          includeSystemImages = true;
+
+          # -- Comment this out unless you compile native/FFI code ------
+          # includeNDK           = true;
+          # ndkVersions          = [ "26.3.11579264" ];
+
+          # No CMake unless you actually open a C++ sub-project
+          # cmakeVersions        = [ "3.22.1" ];
         };
-        androidCustomPackage = android-nixpkgs.sdk.${system} (
-          sdkPkgs: with sdkPkgs; [
-            cmdline-tools-latest
-            build-tools-30-0-3
-            build-tools-33-0-2
-            build-tools-34-0-0
-            platform-tools
-            emulator
-            #patcher-v4
-            platforms-android-28
-            platforms-android-29
-            platforms-android-30
-            platforms-android-31
-            platforms-android-32
-            platforms-android-33
-            platforms-android-34
-          ]
-        );
-        pinnedJDK = pkgs.jdk17; # jdk11, jdk13
+
+        androidSdk = androidComposition.androidsdk;
       in
       {
-        devShells = {
-          default = pkgs.mkShell {
-            name = "My-flutter-dev-shell";
-            buildInputs =
-              with pkgs;
-              [
-                flutter
-                android-studio
-              ]
-              ++ [
-                pinnedJDK
-                #androidEnvCustomPackage.androidsdk
-                androidCustomPackage
-              ];
-            #shellHook = ''
-            #  GRADLE_USER_HOME=$HOME/gradle-user-home
-            #  GRADLE_HOME=$HOME/gradle-home
-            #'';
-            JAVA_HOME = pinnedJDK;
-            #ANDROID_HOME = "${androidEnvCustomPackage.androidsdk}/libexec/android-sdk";
-            ANDROID_HOME = "${androidCustomPackage}/share/android-sdk";
-            #ANDROID_SDK_HOME = "${androidCustomPackage}/share/android-sdk";
-            #ANDROID_SDK_ROOT = "${androidCustomPackage}/share/android-sdk";
-            #ANDROID_AVD_HOME = (toString ./.) + "/.android/avd";
-            #GRADLE_USER_HOME = "/home/specx/gradle-user-home";
-            GRADLE_USER_HOME = "/home/specx/.gradle";
-            #GRADLE_HOME = "/home/specx/gradle-home";
-            GRADLE_OPTS = "-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidCustomPackage}/share/android-sdk/build-tools/34.0.0/aapt2";
+        devShells.default =
+          # local variable visible only inside this mkShell
+          let
+            androidHome = "${androidSdk}/libexec/android-sdk";
+          in
+          pkgs.mkShell {
+            name = "flutter-dev-shell";
+
+            buildInputs = with pkgs; [
+              flutter
+              androidSdk
+              jdk17
+              qemu_kvm
+            ];
+
+            # export environment variables
+            ANDROID_HOME = androidHome;
+            ANDROID_SDK_ROOT = androidHome;
+            JAVA_HOME = pkgs.jdk17.home;
+
+            GRADLE_OPTS = ''
+              -Dorg.gradle.project.android.aapt2FromMavenOverride=${androidHome}/build-tools/34.0.0/aapt2
+            '';
+
+            shellHook = ''
+              echo "✓ Flutter & Android SDK initialised."
+            '';
           };
-        };
+
       }
     );
 }
