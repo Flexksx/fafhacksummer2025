@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    id("com.google.gms.google-services")
     alias(libs.plugins.kotlin.compose)
 }
 
@@ -45,9 +46,11 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.firestore)
     // Compose Bill of Materials (BOM) - Manages versions for all Compose libraries
-    implementation(platform(libs.androidx.compose.bom))
-
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics)
     // Essential Compose Libraries
     implementation(libs.androidx.activity.compose) // Already includes activity-compose
     implementation(libs.androidx.ui)
