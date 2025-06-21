@@ -56,7 +56,7 @@
             "34"
           ];
           includeSources = false;
-          includeSystemImages = false;
+          includeSystemImages = true;
           systemImageTypes = [ "google_apis_playstore" ];
           abiVersions = [
             "armeabi-v7a"
