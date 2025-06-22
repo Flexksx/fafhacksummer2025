@@ -67,6 +67,11 @@ dependencies {
     implementation(libs.androidx.runtime.rxjava2)
     implementation(libs.androidx.material3.android)
     implementation(libs.androidx.navigation.compose.android)
+    // GSON
+    implementation("com.google.code.gson:gson:2.13.1")
+
+    implementation(libs.androidx.material.icons.core)
+
     // Testing Libraries
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

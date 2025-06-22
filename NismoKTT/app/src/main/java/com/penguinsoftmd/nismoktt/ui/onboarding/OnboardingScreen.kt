@@ -28,11 +28,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,16 +38,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.penguinsoftmd.nismoktt.data.onboarding.OnboardingStepQuestion
 import com.penguinsoftmd.nismoktt.data.onboarding.OnboardingStepQuestionService
+import com.penguinsoftmd.nismoktt.data.preferences.PreferencesManager
 
 @Composable
 fun OnboardingScreen(
-    navController: NavController
+    navController: NavController,
+    preferencesManager: PreferencesManager
 ) {
     // 1. Manually create the dependencies the ViewModel needs.
+    val context = LocalContext.current
     val questionService = OnboardingStepQuestionService()
 
     // 2. Create the factory and pass in the dependencies.
-    val viewModelFactory = OnboardingViewModelFactory(questionService)
+    val viewModelFactory = OnboardingViewModelFactory(questionService, preferencesManager)
 
     // 3. Get the ViewModel instance using the custom factory.
     val viewModel: OnboardingViewModel = viewModel(factory = viewModelFactory)
@@ -63,6 +64,12 @@ fun OnboardingScreen(
                 // This is the only branch needed for your sealed class event
                 is OnboardingEvent.NavigateToHome -> {
                     navController.navigate("home_route") { // Or your main app route
+                        popUpTo("onboarding") { inclusive = true }
+                    }
+                }
+
+                is OnboardingEvent.NavigateToDashboard -> {
+                    navController.navigate("dashboard") {
                         popUpTo("onboarding") { inclusive = true }
                     }
                 }
@@ -82,7 +89,7 @@ fun OnboardingScreen(
                 uiState.isLoading -> CircularProgressIndicator()
                 uiState.error != null -> Text(text = uiState.error!!)
                 uiState.isCompleted -> { // ADDED: The new "Done" state
-                    DoneContent(onContinueClicked = { viewModel.navigateToHome() })
+                    DoneContent(onContinueClicked = { viewModel.navigateToDashboard() })
                 }
 
                 uiState.currentQuestion != null -> {
@@ -126,7 +133,6 @@ fun OnboardingStepContent(
     totalSteps: Int,
     onOptionSelected: (String) -> Unit
 ) {
-    var selectedOption by remember { mutableStateOf<String?>(null) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -162,23 +168,10 @@ fun OnboardingStepContent(
             items(question.options, key = { it.id }) { option ->
                 OnboardingOptionButton(
                     text = option.text,
-                    isSelected = option.id == selectedOption,
-                    onClick = { selectedOption = option.id }
+                    isSelected = option.isSelected,
+                    onClick = { onOptionSelected(option.id) }
                 )
             }
-        }
-        Spacer(Modifier.height(24.dp))
-        Button(
-            onClick = { selectedOption?.let { onOptionSelected(it) } },
-            shapes = ButtonDefaults.shapes(),
-            enabled = selectedOption != null,
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp),
-            border = null,
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Submit")
         }
     }
 }
@@ -193,12 +186,14 @@ fun DoneContent(onContinueClicked: () -> Unit) {
     ) {
         Text("All done!", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(16.dp))
-        Text("Thank you for completing the onboarding.")
+        Text(
+            "Thank you for completing the assessment. Let's check your child's personalized care insights.",
+            textAlign = TextAlign.Center
+        )
         Spacer(Modifier.height(32.dp))
-        // Updated Continue button using the expressive large Button API.
         Button(
             onClick = onContinueClicked,
-            shapes = ButtonDefaults.shapes(), // round shape
+            shapes = ButtonDefaults.shapes(),
             enabled = true,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp),
@@ -206,7 +201,7 @@ fun DoneContent(onContinueClicked: () -> Unit) {
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Continue to App")
+            Text("View Child Care Dashboard")
         }
     }
 }

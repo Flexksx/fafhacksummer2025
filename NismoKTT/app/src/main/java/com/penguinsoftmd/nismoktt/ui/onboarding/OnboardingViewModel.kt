@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.penguinsoftmd.nismoktt.data.onboarding.OnboardingStepQuestionService
+import com.penguinsoftmd.nismoktt.data.preferences.PreferencesManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,10 +16,12 @@ import kotlinx.coroutines.launch
 
 sealed class OnboardingEvent {
     data object NavigateToHome : OnboardingEvent()
+    data object NavigateToDashboard : OnboardingEvent()
 }
 
 class OnboardingViewModel(
-    private val questionService: OnboardingStepQuestionService
+    private val questionService: OnboardingStepQuestionService,
+    private val preferencesManager: PreferencesManager
 ) : ViewModel() {
 
     companion object {
@@ -69,6 +72,12 @@ class OnboardingViewModel(
         }
     }
 
+    fun navigateToDashboard() {
+        viewModelScope.launch {
+            _eventFlow.emit(OnboardingEvent.NavigateToDashboard)
+        }
+    }
+
     private fun loadQuestions() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -106,15 +115,30 @@ class OnboardingViewModel(
     }
 
     private fun finishOnboarding() {
-        // Calculate the total impact score from all selected answers.
+        // Calculate the total impact score from all selected answers
         val totalImpactScore = _uiState.value.questions.sumOf { question ->
             question.options.filter { it.isSelected }.sumOf { it.impact }
         }
 
-        Log.d(TAG, "Onboarding finished with total impact score: $totalImpactScore")
-        // TODO: Save the totalImpactScore to a repository or Firestore.
+        // Calculate scores by category
+        val categoryScores = mutableMapOf<String, Int>()
 
-        // Update the state to show the "Done" screen in the UI.
+        // Group questions by category and sum the scores
+        _uiState.value.questions.forEach { question ->
+            val categoryKey = question.category.toString()
+            val categoryScore = question.options.filter { it.isSelected }.sumOf { it.impact }
+            categoryScores[categoryKey] = (categoryScores[categoryKey] ?: 0) + categoryScore
+        }
+
+        Log.d(TAG, "Onboarding finished with total impact score: $totalImpactScore")
+        Log.d(TAG, "Category scores: $categoryScores")
+
+        // Save the results if preferences manager is available
+        viewModelScope.launch {
+            preferencesManager.completeOnboarding(totalImpactScore, categoryScores)
+        }
+
+        // Update the state to show the "Done" screen in the UI
         _uiState.update { it.copy(isCompleted = true) }
     }
 }
