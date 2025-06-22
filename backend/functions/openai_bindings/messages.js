@@ -12,6 +12,7 @@ const {
   handleError,
 } = require("./utils");
 
+// Get messages from thread
 router.get("/:id/messages", async (req, res) => {
   if (!validateThreadId(req, res)) return;
 
@@ -28,6 +29,7 @@ router.get("/:id/messages", async (req, res) => {
   }
 });
 
+// Add message to thread
 router.post("/:id/messages", async (req, res) => {
   if (!validateThreadId(req, res)) return;
 
