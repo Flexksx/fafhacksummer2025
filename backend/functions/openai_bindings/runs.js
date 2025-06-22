@@ -16,6 +16,7 @@ const {
   handleError,
 } = require("./utils");
 
+// Create run
 router.post("/:id/runs", async (req, res) => {
   if (!validateThreadId(req, res)) return;
 
@@ -33,6 +34,7 @@ router.post("/:id/runs", async (req, res) => {
   }
 });
 
+// Get run status
 router.get("/:id/runs/:runId", async (req, res) => {
   if (!validateThreadId(req, res)) return;
   if (!validateRunId(req, res)) return;
@@ -48,29 +50,6 @@ router.get("/:id/runs/:runId", async (req, res) => {
     sendJSONResponse(res, 200, runDto);
   } catch (e) {
     handleError(e, res, "getting run");
-  }
-});
-
-router.delete("/:id/runs/:runId", async (req, res) => {
-  if (!validateThreadId(req, res)) return;
-  if (!validateRunId(req, res)) return;
-
-  try {
-    await openaiClient.beta.threads.runs.cancel(
-      req.params.id,
-      req.params.runId
-    );
-
-    logger.debug("Canceled run: ", req.params.runId);
-    sendJSONResponse(res, 204, null);
-  } catch (e) {
-    if (e.message.startsWith("404")) {
-      sendJSONResponse(res, 404, { error: "Run not found" });
-    } else if (e.message.startsWith("400")) {
-      sendJSONResponse(res, 400, { error: "Run already canceled" });
-    } else {
-      handleError(e, res, "canceling run");
-    }
   }
 });
 
