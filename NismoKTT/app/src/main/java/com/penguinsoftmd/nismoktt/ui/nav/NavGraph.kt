@@ -5,6 +5,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.penguinsoftmd.nismoktt.data.activities.ActivityService
 import com.penguinsoftmd.nismoktt.data.preferences.PreferencesManager
 import com.penguinsoftmd.nismoktt.ui.dashboard.DashboardScreen
 import com.penguinsoftmd.nismoktt.ui.onboarding.OnboardingScreen
@@ -14,6 +15,7 @@ import kotlinx.coroutines.runBlocking
 fun NavGraph(startDestination: String) {
     val context = LocalContext.current
     val navController = rememberNavController()
+    val activityService = ActivityService()
 
     // Initialize preferences manager
     val preferencesManager = PreferencesManager(context)
@@ -33,7 +35,10 @@ fun NavGraph(startDestination: String) {
             )
         }
         composable("dashboard") {
-            DashboardScreen(preferencesManager = preferencesManager)
+            DashboardScreen(
+                preferencesManager = preferencesManager,
+                activityService = activityService,
+            )
         }
         composable("home_route") {
             // Your main app screen goes here

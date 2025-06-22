@@ -71,6 +71,7 @@ dependencies {
     implementation("com.google.code.gson:gson:2.13.1")
 
     implementation(libs.androidx.material.icons.core)
+    implementation(libs.androidx.media3.common.ktx)
 
     // Testing Libraries
     testImplementation(libs.junit)
