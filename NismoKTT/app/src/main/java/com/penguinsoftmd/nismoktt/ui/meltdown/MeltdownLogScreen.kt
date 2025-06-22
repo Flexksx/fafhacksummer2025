@@ -26,6 +26,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 private const val MELTDOWN_LOG_ENDPOINT_URL = "https://your-backend.com/api/meltdowns"
 private const val TAG = "MeltdownLogScreen"
@@ -101,22 +103,20 @@ fun MeltdownLogScreen(navController: NavController) {
 
             Button(
                 onClick = {
-                    // Placeholder for backend submission
                     val meltdownData = """
+                        A meltdown was just logged with the following details:
                         Location: $location
                         Time: $time
-                        Conditions: $conditions
+                        Conditions/Triggers: $conditions
                         Preceding Signs: $precedingSigns
+                        
+                        Please start the conversation by providing supportive and empathetic feedback, and ask how you can help the parent. Do not mention that this is a pre-programmed message. Act as a caring assistant.
                     """.trimIndent()
 
-                    Log.d(TAG, "Submitting to $MELTDOWN_LOG_ENDPOINT_URL")
-                    Log.d(TAG, "Data: \n$meltdownData")
-
-                    // Here you would use a network client like Retrofit or Ktor
-                    // to send the data to your backend.
-
-                    // After submission, navigate back
-                    navController.popBackStack()
+                    Log.d(TAG, "Navigating to AI chat with data.")
+                    val encodedData =
+                        URLEncoder.encode(meltdownData, StandardCharsets.UTF_8.toString())
+                    navController.navigate("ai_chat_screen/$encodedData")
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {

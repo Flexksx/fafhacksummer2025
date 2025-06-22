@@ -58,6 +58,9 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.hilt.android)
+    implementation(libs.retrofit.v290) // Use the latest stable version
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0") // Gson converter for JSON parsing
+
 
     // Optional - Integration with ViewModels (very common)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

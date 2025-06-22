@@ -4,22 +4,25 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material3.Card
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -27,10 +30,11 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -41,12 +45,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.penguinsoftmd.nismoktt.data.activities.Activity
 import com.penguinsoftmd.nismoktt.data.activities.ActivityService
+import com.penguinsoftmd.nismoktt.data.activities.ActivityType
 import com.penguinsoftmd.nismoktt.data.preferences.PreferencesManager
 import com.penguinsoftmd.nismoktt.domain.dsm5.Dsm5SpectrumCategory
 import kotlinx.coroutines.launch
@@ -59,14 +65,17 @@ fun DashboardScreen(
     activityService: ActivityService,
     onCareAreaClick: (String) -> Unit = {}
 ) {
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = { Text("Child Care Dashboard") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = Color.White
-                )
+            CenterAlignedTopAppBar(
+                title = { Text("Dashboard") },
+                colors = topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
+                scrollBehavior = scrollBehavior
             )
         },
         floatingActionButton = {
@@ -103,60 +112,10 @@ fun DashboardContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                elevation = CardDefaults.elevatedCardElevation(),
-                colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                ),
-                shape = MaterialTheme.shapes.extraLarge
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "✨ You're doing amazing! ✨",
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-
-                    val supportMessage = when {
-                        totalScore < 5 -> "Every small step counts in your parenting journey. You're providing a loving foundation! 💙"
-                        totalScore < 10 -> "You're being attentive to your child's needs. Keep up the thoughtful care! 🌟"
-                        totalScore < 15 -> "Your dedication to supporting your child is really showing. You're making a difference! 💪"
-                        else -> "Your comprehensive care approach is wonderful. Your child is lucky to have you! 🎉"
-                    }
-
-                    Text(
-                        text = supportMessage,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontWeight = FontWeight.Medium
-                        ),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-
-                    val supportLevel = when {
-                        totalScore < 5 -> "Minimal Support"
-                        totalScore < 10 -> "Some Support"
-                        totalScore < 15 -> "Substantial Support"
-                        else -> "Very Substantial Support"
-                    }
-
-                    Text(
-                        text = "Current Support Level: $supportLevel",
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
+            SupportSummaryCard(
+                totalScore = totalScore,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
         }
 
         item {
@@ -217,6 +176,45 @@ fun DashboardContent(
     }
 }
 
+@Composable
+fun SupportSummaryCard(totalScore: Int, modifier: Modifier = Modifier) {
+    ElevatedCard(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ThumbUp,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(48.dp)
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "You're doing great!",
+                    style = MaterialTheme.typography.titleLarge,
+                )
+
+                val supportMessage = when {
+                    totalScore < 5 -> "Every small step counts. You're providing a loving foundation."
+                    totalScore < 10 -> "You're being attentive to your child's needs. Keep it up!"
+                    totalScore < 15 -> "Your dedication is making a real difference."
+                    else -> "Your comprehensive care is wonderful. Your child is lucky to have you!"
+                }
+
+                Text(
+                    text = supportMessage,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoryCarousel(
@@ -241,8 +239,8 @@ fun CategoryCarousel(
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight(),
-        preferredItemWidth = 280.dp,
-        itemSpacing = 12.dp,
+        preferredItemWidth = 240.dp, // Adjusted for better visibility of multiple items
+        itemSpacing = 8.dp, // Reduced spacing
         contentPadding = PaddingValues(horizontal = 16.dp)
     ) { index ->
         val category = categories[index]
@@ -267,39 +265,46 @@ fun CategoryCard(
     isSelected: Boolean,
     onClick: () -> Unit = {}
 ) {
-    Card(
+    ElevatedCard( // Changed to ElevatedCard for consistency
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp), // Fixed height for consistent carousel appearance
-        elevation = if (isSelected) CardDefaults.elevatedCardElevation() else CardDefaults.cardElevation(),
-        shape = if (isSelected) MaterialTheme.shapes.large else MaterialTheme.shapes.medium,
+            .wrapContentHeight(), // Dynamic height
+        elevation = if (isSelected) CardDefaults.elevatedCardElevation(defaultElevation = 8.dp) else CardDefaults.elevatedCardElevation(),
+        shape = MaterialTheme.shapes.large, // Consistent large shape
         colors = if (isHighImpact) {
             CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer
             )
         } else {
             if (isSelected) {
-                CardDefaults.elevatedCardColors()
+                CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             } else {
-                CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp) // Increased spacing
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f, fill = false)
                 )
 
                 if (isHighImpact) {
@@ -321,7 +326,7 @@ fun CategoryCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.small) // Use theme shape
             )
 
             Text(
@@ -330,39 +335,8 @@ fun CategoryCard(
                 fontWeight = FontWeight.Medium
             )
 
-            if (isHighImpact) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Favorite,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Extra Care Needed",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-
-            // Show support recommendations based on score
-            val recommendation = when {
-                score <= 1 -> "Minimal support needed in this area."
-                score <= 2 -> "Some support may be beneficial."
-                score <= 3 -> "Regular support recommended."
-                score <= 4 -> "Substantial support needed."
-                else -> "Very substantial support required."
-            }
-
-            Text(
-                text = recommendation,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 4.dp)
-            )
+            // Simplified: Removed recommendation text to declutter the card.
+            // The score and high-impact indicator provide enough information at a glance.
         }
     }
 }
@@ -370,29 +344,51 @@ fun CategoryCard(
 
 @Composable
 fun ActivityListItem(activity: Activity, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ElevatedCard( // Changed to ElevatedCard
+        modifier = modifier.fillMaxWidth()
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                imageVector = iconForActivityType(activity.type),
+                contentDescription = activity.type.name,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(40.dp)
+            )
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.weight(1f)
+            ) {
                 Text(
                     text = activity.title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
                 )
-                if (activity.isHighImpact) {
-                    Icon(
-                        imageVector = Icons.Default.Favorite,
-                        contentDescription = "High Impact Activity",
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                Text(text = activity.description, style = MaterialTheme.typography.bodyMedium)
             }
-            Text(text = activity.description, style = MaterialTheme.typography.bodyMedium)
+            if (activity.isHighImpact) {
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = "High Impact Activity",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
+    }
+}
+
+// Helper function to provide an icon for an activity type
+@Composable
+private fun iconForActivityType(type: ActivityType): ImageVector {
+    return when (type.name) {
+        "AT_HOME" -> Icons.Default.Home
+        "OUTDOOR" -> Icons.Default.Star
+        "GENERAL_STRATEGY" -> Icons.Default.Build
+        else -> Icons.Default.Person// A sensible default
     }
 }
 
