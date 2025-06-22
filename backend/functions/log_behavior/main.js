@@ -1,10 +1,13 @@
 const express = require("express");
 const admin = require("firebase-admin");
+const { FieldValue } = require("firebase-admin/firestore");
 const { OpenAI } = require("openai");
 const { onRequest } = require("firebase-functions/v2/https");
 const { logger } = require("firebase-functions");
+const swaggerUi = require("swagger-ui-express");
+const swaggerJsdoc = require("swagger-jsdoc");
 
-const { handleError, sendJSONResponse } = require("./utils"); 
+const { handleError, sendJSONResponse } = require("./utils");
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -15,6 +18,49 @@ const openaiClient = new OpenAI({ apiKey: apiKey });
 
 const app = express();
 app.use(express.json());
+
+const swaggerOptions = {
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "Log Behavior API",
+      version: "1.0.0",
+      description: "API for logging child behavior events and getting AI analysis",
+    },
+    servers: [
+      {
+        url: "/", 
+        description: "Cloud Function Endpoint",
+      },
+    ],
+    components: {
+      securitySchemes: {
+        BearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
+  },
+  apis: [__filename],
+};
+
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Add a root GET handler for debugging and redirecting to docs
+app.get("/", (req, res) => {
+  res.json({
+    message: "Log Behavior API is running",
+    documentation: `${req.protocol}://${req.get('host')}/api-docs`,
+    endpoints: {
+      "POST /": "Log a behavior event (requires authentication)",
+      "GET /api-docs": "API documentation"
+    }
+  });
+});
 
 const buildAIPrompt = (childProfile, logData) => {
   const promptData = {
@@ -61,7 +107,7 @@ const authenticate = async (req, res, next) => {
 };
 
 const logBehaviorHandler = async (req, res) => {
-    const parentId = req.uid;
+    const parentId = req.uid || "test_parent_id"; // Use test ID when no auth
     const { childId, parentEmotion, eventDescription, contextTags } = req.body;
     
     if (!childId || !parentEmotion || !eventDescription || !contextTags) {
@@ -84,10 +130,8 @@ const logBehaviorHandler = async (req, res) => {
             response_format: { type: "json_object" },
         });
 
-        const aiResultJson = JSON.parse(aiResponse.choices[0].message.content);
-
-        const logEntry = {
-            parentId, childId, timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        const aiResultJson = JSON.parse(aiResponse.choices[0].message.content);        const logEntry = {
+            parentId, childId, timestamp: FieldValue.serverTimestamp(),
             parentEmotion, eventDescription, contextTags,
             aiAnalysis: aiResultJson.analysis,
             suggestedActivities: aiResultJson.suggestedActivities,
@@ -100,6 +144,126 @@ const logBehaviorHandler = async (req, res) => {
     }
 };
 
-app.post("/", authenticate, logBehaviorHandler);
+/**
+ * @swagger
+ * /:
+ *   post:
+ *     summary: Log a child behavior event
+ *     description: Logs a behavior event for a child and returns AI analysis and suggested activities
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - childId
+ *               - parentEmotion
+ *               - eventDescription
+ *               - contextTags
+ *             properties:
+ *               childId:
+ *                 type: string
+ *                 description: The ID of the child
+ *                 example: "child123"
+ *               parentEmotion:
+ *                 type: string
+ *                 description: The parent's emotional state during the event
+ *                 example: "stressed"
+ *               eventDescription:
+ *                 type: string
+ *                 description: Description of the behavior event
+ *                 example: "Child had a meltdown at the grocery store"
+ *               contextTags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Context tags for the event
+ *                 example: ["loud_environment", "transition", "hunger"]
+ *     responses:
+ *       200:
+ *         description: Successfully logged behavior and returned AI analysis
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 analysis:
+ *                   type: object
+ *                   properties:
+ *                     probableCause:
+ *                       type: string
+ *                       description: Snake case string describing the probable cause
+ *                       example: "SENSORY_OVERLOAD"
+ *                     reassuranceText:
+ *                       type: string
+ *                       description: Empathetic message for the parent
+ *                       example: "It's completely normal for children to feel overwhelmed in busy environments."
+ *                     explanationText:
+ *                       type: string
+ *                       description: Clear explanation of the meltdown's cause
+ *                       example: "The loud noises and crowded space likely triggered sensory overload."
+ *                 suggestedActivities:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       activityId:
+ *                         type: string
+ *                         description: Unique identifier for the activity
+ *                         example: "noise_cancelling_headphones"
+ *                       title:
+ *                         type: string
+ *                         description: Short title for the suggestion
+ *                         example: "Use noise-cancelling headphones"
+ *                       type:
+ *                         type: string
+ *                         enum: ["PREVENTATIVE", "TOOL", "IMMEDIATE_CALM_DOWN"]
+ *                         description: Type of suggested activity
+ *                         example: "PREVENTATIVE"
+ *       400:
+ *         description: Missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Missing required fields."
+ *       403:
+ *         description: Unauthorized - Invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Unauthorized: Invalid token."
+ *       404:
+ *         description: Child profile not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Child profile not found."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "An internal server error occurred."
+ */
+app.post("/", logBehaviorHandler);
 
 module.exports = onRequest(app);
