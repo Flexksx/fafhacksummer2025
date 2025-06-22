@@ -1,8 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.compiler)
     id("com.google.gms.google-services")
-    alias(libs.plugins.kotlin.compose)
 }
 
 android {
@@ -57,6 +57,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.hilt.android)
 
     // Optional - Integration with ViewModels (very common)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -64,7 +65,8 @@ dependencies {
     implementation(libs.androidx.runtime.livedata)
     // Optional - Integration with RxJava
     implementation(libs.androidx.runtime.rxjava2)
-
+    implementation(libs.androidx.material3.android)
+    implementation(libs.androidx.navigation.compose.android)
     // Testing Libraries
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
