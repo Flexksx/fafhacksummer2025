@@ -16,10 +16,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +44,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.penguinsoftmd.nismoktt.data.activities.Activity
 import com.penguinsoftmd.nismoktt.data.activities.ActivityService
 import com.penguinsoftmd.nismoktt.data.preferences.PreferencesManager
@@ -51,6 +54,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
+    navController: NavController,
     preferencesManager: PreferencesManager,
     activityService: ActivityService,
     onCareAreaClick: (String) -> Unit = {}
@@ -64,6 +68,11 @@ fun DashboardScreen(
                     titleContentColor = Color.White
                 )
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { navController.navigate("log_meltdown") }) {
+                Icon(Icons.Default.Add, contentDescription = "Log a behavior event")
+            }
         }
     ) { paddingValues ->
         DashboardContent(
@@ -88,101 +97,122 @@ fun DashboardContent(
     var activities by remember { mutableStateOf<List<Activity>>(emptyList()) }
     val coroutineScope = rememberCoroutineScope()
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.elevatedCardElevation(),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            ),
-            shape = MaterialTheme.shapes.extraLarge
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                elevation = CardDefaults.elevatedCardElevation(),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ),
+                shape = MaterialTheme.shapes.extraLarge
             ) {
-                Text(
-                    text = "✨ You're doing amazing! ✨",
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "✨ You're doing amazing! ✨",
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
 
-                val supportMessage = when {
-                    totalScore < 5 -> "Every small step counts in your parenting journey. You're providing a loving foundation! 💙"
-                    totalScore < 10 -> "You're being attentive to your child's needs. Keep up the thoughtful care! 🌟"
-                    totalScore < 15 -> "Your dedication to supporting your child is really showing. You're making a difference! 💪"
-                    else -> "Your comprehensive care approach is wonderful. Your child is lucky to have you! 🎉"
+                    val supportMessage = when {
+                        totalScore < 5 -> "Every small step counts in your parenting journey. You're providing a loving foundation! 💙"
+                        totalScore < 10 -> "You're being attentive to your child's needs. Keep up the thoughtful care! 🌟"
+                        totalScore < 15 -> "Your dedication to supporting your child is really showing. You're making a difference! 💪"
+                        else -> "Your comprehensive care approach is wonderful. Your child is lucky to have you! 🎉"
+                    }
+
+                    Text(
+                        text = supportMessage,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+
+                    val supportLevel = when {
+                        totalScore < 5 -> "Minimal Support"
+                        totalScore < 10 -> "Some Support"
+                        totalScore < 15 -> "Substantial Support"
+                        else -> "Very Substantial Support"
+                    }
+
+                    Text(
+                        text = "Current Support Level: $supportLevel",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = FontWeight.SemiBold
+                        ),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 }
-
-                Text(
-                    text = supportMessage,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.Medium
-                    ),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-
-                val supportLevel = when {
-                    totalScore < 5 -> "Minimal Support"
-                    totalScore < 10 -> "Some Support"
-                    totalScore < 15 -> "Substantial Support"
-                    else -> "Very Substantial Support"
-                }
-
-                Text(
-                    text = "Current Support Level: $supportLevel",
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
             }
         }
 
-        Text(
-            text = "Care Areas",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
+        item {
+            Text(
+                text = "Care Areas",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
 
-        CategoryCarousel(
-            categoryScores = categoryScores,
-            onCareAreaClick = { categoryKey ->
-                selectedCategoryKey = if (selectedCategoryKey == categoryKey) {
-                    null // Deselect if clicked again
-                } else {
-                    categoryKey
-                }
+        item {
+            // The Box with negative padding that caused the crash has been removed.
+            // The CategoryCarousel now spans the full width, and its own internal
+            // contentPadding will align its items with the rest of the content.
+            CategoryCarousel(
+                categoryScores = categoryScores,
+                onCareAreaClick = { categoryKey ->
+                    selectedCategoryKey = if (selectedCategoryKey == categoryKey) {
+                        null // Deselect if clicked again
+                    } else {
+                        categoryKey
+                    }
 
-                coroutineScope.launch {
-                    activities = if (selectedCategoryKey != null) {
-                        try {
-                            val domain = Dsm5SpectrumCategory.valueOf(selectedCategoryKey!!)
-                            activityService.getActivitiesByDomain(domain)
-                        } catch (e: IllegalArgumentException) {
-                            // Handle case where categoryKey is not a valid Dsm5SpectrumCategory
+                    coroutineScope.launch {
+                        activities = if (selectedCategoryKey != null) {
+                            try {
+                                val domain = Dsm5SpectrumCategory.valueOf(selectedCategoryKey!!)
+                                activityService.getActivitiesByDomain(domain)
+                            } catch (e: IllegalArgumentException) {
+                                // Handle case where categoryKey is not a valid Dsm5SpectrumCategory
+                                emptyList()
+                            }
+                        } else {
                             emptyList()
                         }
-                    } else {
-                        emptyList()
                     }
                 }
-            }
-        )
+            )
+        }
 
         if (activities.isNotEmpty()) {
-            ActivityList(
-                activities = activities,
-                selectedCategoryName = formatCategoryName(selectedCategoryKey ?: "")
-            )
+            item {
+                Text(
+                    text = "Suggested Activities for ${formatCategoryName(selectedCategoryKey ?: "")}",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+            items(activities, key = { it.id }) { activity ->
+                ActivityListItem(
+                    activity = activity,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
         }
     }
 }
@@ -210,8 +240,7 @@ fun CategoryCarousel(
         state = carouselState,
         modifier = Modifier
             .fillMaxWidth()
-            .wrapContentHeight()
-            .padding(vertical = 8.dp),
+            .wrapContentHeight(),
         preferredItemWidth = 280.dp,
         itemSpacing = 12.dp,
         contentPadding = PaddingValues(horizontal = 16.dp)
@@ -285,7 +314,7 @@ fun CategoryCard(
 
             // Show a progress indicator for the score
             // Assuming max score is 5
-            val progress = score.toFloat() / 5f
+            val progress = (score.toFloat() / 5f).coerceIn(0f, 1f)
 
             LinearProgressIndicator(
                 progress = { progress },
@@ -338,27 +367,11 @@ fun CategoryCard(
     }
 }
 
-@Composable
-fun ActivityList(activities: List<Activity>, selectedCategoryName: String) {
-    Column(modifier = Modifier.padding(top = 16.dp)) {
-        Text(
-            text = "Suggested Activities for $selectedCategoryName",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(activities) { activity ->
-                ActivityListItem(activity = activity)
-            }
-        }
-    }
-}
 
 @Composable
-fun ActivityListItem(activity: Activity) {
+fun ActivityListItem(activity: Activity, modifier: Modifier = Modifier) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
